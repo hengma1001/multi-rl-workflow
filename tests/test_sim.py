@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../")
-from multirl.sim.run import main as sim_eval
+from multirl.sim.run import sim_eval
 
 if __name__ == '__main__':
     pdb = '2pwz_G.pdb'
