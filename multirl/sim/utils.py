@@ -17,7 +17,7 @@ import MDAnalysis as mda
 
 from rdkit import Chem
 from mendeleev import element
-from MDAnalysis.analysis import align
+from MDAnalysis.analysis import align, rms
 
 
 PathLike = Union[str, Path]
@@ -275,3 +275,20 @@ def align_to_template(pdb_file, ref_file, pdb_output):
     ref = mda.Universe(ref_file)
     _ = align.alignto(pdb, ref, select='protein and name CA')
     pdb.atoms.write(pdb_output)
+
+
+def cal_rmsf(pdb, dcd): 
+    mda_u = mda.Universe(pdb, dcd)
+    selection = 'protein and name CA'
+    
+    average_frame = align.AverageStructure(mda_u, mda_u, 
+                            select=selection, ref_frame=0).run()
+    ref = average_frame.results.universe
+
+    aligner = align.AlignTraj(mda_u, ref, select=selection, in_memory=True).run()
+
+    calphas = mda_u.select_atoms(selection)
+    rmsfer = rms.RMSF(calphas, verbose=True).run()
+
+    return rmsfer.rmsf
+    
