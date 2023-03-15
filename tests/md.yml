@@ -1,0 +1,12 @@
+checkpoint: null
+dt: 2
+explicit_sol: true
+init_vel: false
+max_iter: 1
+nonbonded_cutoff: 1
+pdb_file: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh/md_setups/complex_sim/examples/input_2pwz_G/2pwz_G.gro
+pressure: 1.0
+report_time: 10
+sim_time: 1
+temperature: 310
+top_file: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh/md_setups/complex_sim/examples/input_2pwz_G/2pwz_G.top

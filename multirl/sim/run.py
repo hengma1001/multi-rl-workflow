@@ -8,7 +8,7 @@ from multirl.sim.amber import AMBER_param
 from multirl.sim.sim import Simulate
 from multirl.sim.utils import dict_from_yaml, cal_rmsf
 
-def main(yml_file, pdb=None):
+def sim_eval(yml_file, pdb=None):
     args = dict_from_yaml(yml_file)
     if not pdb:
         pdb = args['pdb_file']
