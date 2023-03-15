@@ -246,9 +246,10 @@ class Simulate(yml_base):
         nsteps = int(self.sim_time / self.dt + .5)
         logger.info(f"  Running simulation for {nsteps} steps. ")
         self.simulation.step(nsteps)
-        for output in os.listdir(run_path):
-            src = f"{run_path}/{output}"
-            shutil.move(src, path)
+        if self.local_ssd: 
+            for output in os.listdir(run_path):
+                src = f"{run_path}/{output}"
+                shutil.move(src, path)
         os.chdir(self.base_dir)
 
     def md_run(self): 
