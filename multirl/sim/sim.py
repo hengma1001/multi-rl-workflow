@@ -101,7 +101,7 @@ class Simulate(yml_base):
             forcefield='amber14-all.xml', 
             sol_model='implicit/gbn2.xml',
             local_ssd=None,
-            **args) -> None:
+            **kwargs) -> None:
 
         super().__init__()
         # inputs

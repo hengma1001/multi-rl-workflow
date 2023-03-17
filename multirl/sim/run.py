@@ -8,11 +8,11 @@ from multirl.sim.amber import AMBER_param
 from multirl.sim.sim import Simulate
 from multirl.sim.utils import dict_from_yaml, cal_rmsf
 
-def sim_eval(yml_file, pdb=None):
+def sim_eval(yml_file, pdb=None, amber_bin=''):
     args = dict_from_yaml(yml_file)
     if not pdb:
         pdb = args['pdb_file']
-    pdb, top = param(pdb)
+    pdb, top = param(pdb, amber_bin=amber_bin)
 
     args['pdb_file'] = pdb
     args['top_file'] = top
@@ -40,7 +40,8 @@ def param(pdb, **kwargs):
 
     # run and get the parameters
     os.chdir(work_dir)
-    amberP = AMBER_param(pdb_copy, **kwargs)
+    amberP = AMBER_param(pdb_copy, forcefield='ff14SB',
+            watermodel='tip3p', **kwargs)
     print(amberP.prot_files, amberP.lig_files)
     pdb, top = amberP.param_comp()
     os.chdir(host_dir)

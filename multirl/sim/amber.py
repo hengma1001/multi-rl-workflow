@@ -17,6 +17,7 @@ class AMBER_param(object):
 
     def __init__(
             self, pdb,
+            amber_bin='',
             add_sol=True,
             lig_charges={},
             lig_param_path='',
@@ -33,6 +34,7 @@ class AMBER_param(object):
 
         self.pdb = pdb
         self.label = os.path.basename(pdb)[:-4]
+        self.amber_bin = amber_bin
         self.add_sol = add_sol
         self.lig_charges = lig_charges
         self.lig_param_path = lig_param_path
@@ -116,11 +118,11 @@ class AMBER_param(object):
                 lig_charge = get_lig_charge(lig)
             
             antechamber_command = \
-                f'antechamber -i {lig} -fi pdb -o {lig_tag}.mol2 '\
+                f'{self.amber_bin}antechamber -i {lig} -fi pdb -o {lig_tag}.mol2 '\
                 f'-fo mol2 -c bcc -pf y -an y -nc {lig_charge}'
             subprocess.check_output(antechamber_command, shell=True)
             param_command = \
-                f'parmchk2 -i {lig_tag}.mol2 -f mol2 -o {lig_tag}.frcmod'
+                f'{self.amber_bin}parmchk2 -i {lig_tag}.mol2 -f mol2 -o {lig_tag}.frcmod'
             subprocess.check_output(param_command, shell=True)
 
     def param_comp(self):
@@ -137,7 +139,7 @@ class AMBER_param(object):
         if not self.lig_param_path:
             self.param_ligs()
         self.write_tleapIN()
-        subprocess.check_output(f'tleap -f leap.in', shell=True)
+        subprocess.check_output(f'{self.amber_bin}tleap -f leap.in', shell=True)
         # checking whether tleap is done
         if (os.path.exists(self.output_top) and
             os.path.exists(self.output_inpcrd)):
