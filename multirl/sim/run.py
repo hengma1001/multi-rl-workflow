@@ -24,7 +24,7 @@ def sim_eval(yml_file, pdb=None):
     return rmsf
 
 
-def param(pdb):
+def param(pdb, **kwargs):
     host_dir = os.getcwd()
 
     # label for ligand identity
@@ -40,7 +40,7 @@ def param(pdb):
 
     # run and get the parameters
     os.chdir(work_dir)
-    amberP = AMBER_param(pdb_copy)
+    amberP = AMBER_param(pdb_copy, **kwargs)
     print(amberP.prot_files, amberP.lig_files)
     pdb, top = amberP.param_comp()
     os.chdir(host_dir)
