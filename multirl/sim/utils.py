@@ -10,7 +10,8 @@ import warnings
 from typing import Union
 from pathlib import Path
 from typing import Type, TypeVar
-# from pydantic import BaseSettings as _BaseSettings
+from pydantic import BaseSettings as _BaseSettings
+from pydantic import validator
 
 import parmed as pmd
 import MDAnalysis as mda
@@ -23,6 +24,20 @@ from MDAnalysis.analysis import align, rms
 PathLike = Union[str, Path]
 _T = TypeVar("_T")
 
+
+class BaseSettings(_BaseSettings):
+    """Base settings to provide an easier interface to read/write YAML files."""
+
+    def dump_yaml(self, filename: PathLike) -> None:
+        with open(filename, mode="w") as fp:
+            yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
+
+    @classmethod
+    def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
+        with open(filename) as fp:
+            raw_data = yaml.safe_load(fp)
+        return cls(**raw_data)
+    
 
 def build_logger(debug=0):
     logger_level = logging.DEBUG if debug else logging.INFO
