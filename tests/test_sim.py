@@ -6,5 +6,5 @@ if __name__ == '__main__':
     pdb = '2pwz_G.pdb'
     yml = 'md.yml'
     rmsf = sim_eval(yml, pdb=pdb,
-                    amber_bin='')
+            amber_bin='/lambda_stor/homes/heng.ma/miniconda3/bin/')
     print(rmsf)
