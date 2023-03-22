@@ -1,5 +1,6 @@
 import os
 import tempfile
+import subprocess
 import numpy as np
 import pandas as pd
 import parmed as pmd
@@ -27,7 +28,8 @@ class lig_setup(BaseSettings):
     mp_lig: top_setup
 
 
-def evb_run(pdb, ref_pdb, lig_yml, template_yml, pymol_exec):
+def evb_run(pdb, ref_pdb, lig_yml, template_yml,
+            pymol_exec='pymol', wham_exe='wham_exe'):
     """Run empirical valence bond method for reaction free energy profile
 
     Args: 
@@ -36,6 +38,7 @@ def evb_run(pdb, ref_pdb, lig_yml, template_yml, pymol_exec):
         lig_yml: ligand top setup for both reactant and product
         template_yml: template setup for evb sim runs 
         pymol_exec: pymol executable path
+        wham_exec: wham executable path
     Returns:
 
     """
@@ -45,16 +48,17 @@ def evb_run(pdb, ref_pdb, lig_yml, template_yml, pymol_exec):
     logger.info("Building MD setup for each sampling point...")
     md_ymls = evb_ymls(template_yml, sim_setups)
 
-    return md_ymls
-    # loop through all sim setups
+    # return md_ymls
+    # TODO: added function to run and analyze simulations
     sim_paths = []
-    for yml in evb_ymls:
-        sim_path = sim(**dict_from_yaml(yml))
-        sim_paths.append(sim_path)
+    for yml in md_ymls:
+        sim_paths.append(sim(**dict_from_yaml(yml)))
 
-    for sim_path in sim_paths:
-        log = f"{sim_path}/output.log"
-        rc_rec = f"{sim_path}/output.rc"
+    # gather and analysis
+    pmf = evb_analysis(
+        sim_paths, wham_exe=wham_exe
+    )
+    return pmf
 
 
 def evb_ymls(template_yml, sim_setups):
@@ -238,6 +242,7 @@ def evb_analysis(
     rmsf = run_wham(df, wham_exe=wham_exe)
     return rmsf
 
+
 @run_in_tempdir
 def run_wham(df, wham_exe):
     data_path = 'data'
@@ -249,7 +254,8 @@ def run_wham(df, wham_exe):
             np.savetxt(save_sim, sub_df.to_numpy())
             f_meta.write(f"{save_sim} {rc0*10:.2f} {5000}\n")
 
-    os.system(f'{wham_exe} -.5 .5 50 0.0000000001 300 0 meta.dat pmf_out 100 42')
+    wham_cmd = f'{wham_exe} -.5 .5 50 0.0000000001 300 0 meta.dat pmf_out 100 42'
+    subprocess.check_output(wham_cmd, shell=True)
     pmf = np.loadtxt('pmf_out')
 
     return pmf
