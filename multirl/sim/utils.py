@@ -1,7 +1,8 @@
-import os 
-import time
+import os
 import yaml
+import json
 import logging
+import functools
 import argparse
 import tempfile
 import subprocess
@@ -11,7 +12,6 @@ from typing import Union
 from pathlib import Path
 from typing import Type, TypeVar
 from pydantic import BaseSettings as _BaseSettings
-from pydantic import validator
 
 import parmed as pmd
 import MDAnalysis as mda
@@ -34,10 +34,23 @@ class BaseSettings(_BaseSettings):
 
     @classmethod
     def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
-        with open(filename) as fp:
+        with open(filename, 'r') as fp:
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)
-    
+
+
+def run_in_tempdir(func):
+    """run function in temp dir"""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        host_dir = os.path.abspath('.')
+        with tempfile.TemporaryDirectory() as tp:
+            os.chdir(tp)
+            results = func(*args, **kwargs)
+        os.chdir(host_dir)
+        return results
+    return wrapper
+
 
 def build_logger(debug=0):
     logger_level = logging.DEBUG if debug else logging.INFO
@@ -45,28 +58,33 @@ def build_logger(debug=0):
     logger = logging.getLogger(__name__)
     return logger
 
-def dict_from_yaml(yml_file): 
+
+def dict_from_yaml(yml_file):
     return yaml.safe_load(open(yml_file, 'r'))
 
-def dict_to_yaml(dict_t, yml_file): 
-    with open(yml_file, 'w') as fp: 
+
+def dict_to_yaml(dict_t, yml_file):
+    with open(yml_file, 'w') as fp:
         yaml.dump(dict_t, fp, default_flow_style=False)
 
-class yml_base(object): 
-    def dump_yaml(self, cfg_path: PathLike) -> None: 
+
+class yml_base(object):
+    def dump_yaml(self, cfg_path: PathLike) -> None:
         dict_to_yaml(self.get_setup(), cfg_path)
 
-def create_path(dir_type='md', sys_label=None, create_path=True): 
+
+def create_path(dir_type='md', sys_label=None, create_path=True):
     """
     create MD simulation path based on its label (int), 
     and automatically update label if path exists. 
     """
     dir_path = f'{dir_type}_run'
-    if sys_label: 
+    if sys_label:
         dir_path = f'{dir_path}_{sys_label}'
     if create_path:
         os.makedirs(dir_path, exist_ok=True)
     return os.path.abspath(dir_path)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -74,7 +92,7 @@ def parse_args() -> argparse.Namespace:
         "-c", "--config", help="YAML config file", type=str, required=True,
     )
     parser.add_argument(
-        "-d", "--dry_run", help="Option to only build all the ymls", 
+        "-d", "--dry_run", help="Option to only build all the ymls",
         type=bool, default=False, required=False,
     )
     args = parser.parse_args()
@@ -93,10 +111,10 @@ def find_diff(a, b):
 
 def run_and_save(command, log):
     tsk = subprocess.Popen(
-            command,
-            stdout=log, # subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=True)
+        command,
+        stdout=log,  # subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        shell=True)
     tsk.wait()
 
 
@@ -139,6 +157,7 @@ def get_lig_name(lig_pdb):
     mda_u = mda.Universe(lig_pdb)
     return mda_u.atoms[0].resname
 
+
 def update_pdb_obabel(pdb_file, format='pdb'):
     """
     add correct conect info to pdb structure 
@@ -151,38 +170,38 @@ def update_pdb_obabel(pdb_file, format='pdb'):
     return pdb_ob
 
 
-def get_formal_charge(pdb_file, format='pdb'): 
+def get_formal_charge(pdb_file, format='pdb'):
     pdb_file = update_pdb_obabel(pdb_file, format=format)
     if format == 'pdb':
         mol = Chem.MolFromPDBFile(pdb_file)
-    elif format == 'mol2': 
+    elif format == 'mol2':
         mol = Chem.MolFromMol2File(pdb_file)
-    else: 
+    else:
         raise Exception("Unknown format...")
     return Chem.GetFormalCharge(mol)
 
 
-def get_lig_charge(pdb_file): 
+def get_lig_charge(pdb_file):
     try:
         lig_charge = get_formal_charge(pdb_file, format='mol2')
-    except: 
+    except:
         lig_charge = get_formal_charge(pdb_file, format='pdb')
     n_electron = get_n_electron(pdb_file)
-    if (n_electron % 2 == 0) & (lig_charge % 2 == 0): 
-        return lig_charge 
+    if (n_electron % 2 == 0) & (lig_charge % 2 == 0):
+        return lig_charge
     elif (n_electron % 2 != 0) & (lig_charge % 2 != 0):
         return lig_charge
-    elif n_electron % 2 == 0: 
-        warnings.warn(f"Using 0 for ligand charge. However, number of electron "\
-            f"{n_electron} and charge {lig_charge} "\
-            f"are mismatch for ligand {os.path.abspath(pdb_file)}")
+    elif n_electron % 2 == 0:
+        warnings.warn(f"Using 0 for ligand charge. However, number of electron "
+                      f"{n_electron} and charge {lig_charge} "
+                      f"are mismatch for ligand {os.path.abspath(pdb_file)}")
         return 0
     else:
-        raise Exception(f"Number of electron {n_electron} and charge {lig_charge} "\
-            f"are mismatch for ligand {os.path.abspath(pdb_file)}")
+        raise Exception(f"Number of electron {n_electron} and charge {lig_charge} "
+                        f"are mismatch for ligand {os.path.abspath(pdb_file)}")
 
 
-def get_n_electron(pdb_file): 
+def get_n_electron(pdb_file):
     mda_u = mda.Universe(pdb_file)
     n_ele = [element(atom.element).atomic_number for atom in mda_u.atoms]
     return sum(n_ele)
@@ -197,18 +216,18 @@ def is_protein(pdb_file):
         return False
 
 
-def run_at_temp(func):
-    """
-    Run functions at a temp dir
-    """
-    def wrapper(*args, **kwargs):
-        current_dir = os.getcwd()
-        temp_path = tempfile.TemporaryDirectory()
-        os.chdir(temp_path.name)
-        output = func(*args, **kwargs)
-        os.chdir(current_dir)
-        return output
-    return wrapper
+# def run_at_temp(func):
+#     """
+#     Run functions at a temp dir
+#     """
+#     def wrapper(*args, **kwargs):
+#         current_dir = os.getcwd()
+#         temp_path = tempfile.TemporaryDirectory()
+#         os.chdir(temp_path.name)
+#         output = func(*args, **kwargs)
+#         os.chdir(current_dir)
+#         return output
+#     return wrapper
 
 
 def clean_pdb(pdb_file):
@@ -292,12 +311,12 @@ def align_to_template(pdb_file, ref_file, pdb_output):
     pdb.atoms.write(pdb_output)
 
 
-def cal_rmsf(pdb, dcd): 
+def cal_rmsf(pdb, dcd):
     mda_u = mda.Universe(pdb, dcd)
     selection = 'protein and name CA'
-    
-    average_frame = align.AverageStructure(mda_u, mda_u, 
-                            select=selection, ref_frame=0).run()
+
+    average_frame = align.AverageStructure(mda_u, mda_u,
+                                           select=selection, ref_frame=0).run()
     ref = average_frame.results.universe
 
     aligner = align.AlignTraj(mda_u, ref, select=selection, in_memory=True).run()
@@ -306,4 +325,3 @@ def cal_rmsf(pdb, dcd):
     rmsfer = rms.RMSF(calphas, verbose=True).run()
 
     return rmsfer.rmsf
-    
