@@ -1,6 +1,4 @@
 import os
-import yaml
-import json
 import shutil
 import parmed as pmd
 
@@ -12,9 +10,10 @@ from .utils import build_logger
 from .utils import yml_base
 from .utils import create_path
 from .reporter import RCReporter
-#, get_dir_base
+# , get_dir_base
 
 logger = build_logger()
+
 
 class Simulate(yml_base):
     """
@@ -79,29 +78,29 @@ class Simulate(yml_base):
     """
 
     def __init__(self,
-            pdb_file,
-            top_file=None, 
-            checkpoint=None,
-            gpu_id=0,
-            output_traj="output.dcd",
-            output_log="output.log", 
-            output_rc="output.rc",
-            report_time=10,
-            log_report=0,
-            sim_time=10,
-            dt=2.,
-            skip_step=0,
-            explicit_sol=True,
-            temperature=300., 
-            pressure=1.,
-            nonbonded_cutoff=1.,
-            init_vel=False,
-            dbonds_umb={},
-            morse_bond={},
-            forcefield='amber14-all.xml', 
-            sol_model='implicit/gbn2.xml',
-            local_ssd=None,
-            **kwargs) -> None:
+                 pdb_file,
+                 top_file=None,
+                 checkpoint=None,
+                 gpu_id=0,
+                 output_traj="output.dcd",
+                 output_log="output.log",
+                 output_rc="output.rc",
+                 report_time=10,
+                 log_report=0,
+                 sim_time=10,
+                 dt=2.,
+                 skip_step=0,
+                 explicit_sol=True,
+                 temperature=300.,
+                 pressure=1.,
+                 nonbonded_cutoff=1.,
+                 init_vel=False,
+                 dbonds_umb={},
+                 morse_bond={},
+                 forcefield='amber14-all.xml',
+                 sol_model='implicit/gbn2.xml',
+                 local_ssd=None,
+                 **kwargs) -> None:
 
         super().__init__()
         # inputs
@@ -118,7 +117,7 @@ class Simulate(yml_base):
         self.log_report = log_report * u.picoseconds
         self.sim_time = sim_time * u.nanoseconds
         self.skip_step = skip_step
-        # sim setup 
+        # sim setup
         self.dt = dt * u.femtoseconds
         self.explicit_sol = explicit_sol
         self.temperature = temperature
@@ -126,7 +125,7 @@ class Simulate(yml_base):
         self.nonbonded_cutoff = nonbonded_cutoff * u.nanometers
         self.init_vel = init_vel
 
-        # 
+        #
         self.dbonds_umb = dbonds_umb
         self.morse_bond = morse_bond
 
@@ -135,66 +134,66 @@ class Simulate(yml_base):
         self.sol_model = sol_model
         self.base_dir = os.getcwd()
 
-        # run path 
+        # run path
         self.local_ssd = local_ssd
 
-    def get_setup(self): 
+    def get_setup(self):
         return {
-            #'r0': self.dbonds_umb['rc0'],
-                'pdb_file': self.pdb_file, 
-                'top_file': self.top_file, 
-                'checkpoint': self.checkpoint}
+            # 'r0': self.dbonds_umb['rc0'],
+            'pdb_file': self.pdb_file,
+            'top_file': self.top_file,
+            'checkpoint': self.checkpoint}
 
-    def build_system(self): 
+    def build_system(self):
         system_setup = {
-                "nonbondedMethod": app.PME if self.explicit_sol 
-                                        else app.CutoffNonPeriodic, 
-                # "constraints": app.HBonds, 
-                 }
+            "nonbondedMethod": app.PME if self.explicit_sol
+            else app.CutoffNonPeriodic,
+            # "constraints": app.HBonds,
+        }
         if self.nonbonded_cutoff:
             system_setup["nonbondedCutoff"] = self.nonbonded_cutoff
-        
-        if self.top_file: 
-            pdb = pmd.load_file(self.top_file, xyz = self.pdb_file)
-            if not self.explicit_sol: 
+
+        if self.top_file:
+            pdb = pmd.load_file(self.top_file, xyz=self.pdb_file)
+            if not self.explicit_sol:
                 system_setup['implicitSolvent'] = app.GBn2
             system = pdb.createSystem(**system_setup)
-        else: 
-            # only supporting implicit runs without topology file 
+        else:
+            # only supporting implicit runs without topology file
             # for now
             pdb = pmd.load_file(self.pdb_file)
             forcefield = app.ForceField(
-                           self.forcefield,  self.sol_model)
+                self.forcefield,  self.sol_model)
             system = forcefield.createSystem(pdb.topology, **system_setup)
 
-        if self.pressure and self.explicit_sol: 
+        if self.pressure and self.explicit_sol:
             system.addForce(omm.MonteCarloBarostat(
-                            self.pressure*u.bar, 
+                            self.pressure*u.bar,
                             self.temperature*u.kelvin)
                             )
-        ###hm add umbrella potential here 
+        # hm add umbrella potential here
         if self.dbonds_umb:
             morse_bond = morse_bond_force(**self.morse_bond)
             system.addForce(morse_bond)
             ddbonds_umb = ddbonds_umbforce(**self.dbonds_umb)
             system.addForce(ddbonds_umb)
-        
-        self.system = system 
+
+        self.system = system
         self.top = pdb
 
-    def build_simulation(self): 
-        self.build_system() 
-        if self.temperature: 
+    def build_simulation(self):
+        self.build_system()
+        if self.temperature:
             integrator = omm.LangevinMiddleIntegrator(
-                        self.temperature * u.kelvin, 
-                        1 / u.picosecond, self.dt)
-        else: 
+                self.temperature * u.kelvin,
+                1 / u.picosecond, self.dt)
+        else:
             integrator = omm.VerletIntegrator(self.dt)
-        
+
         try:
             platform = omm.Platform_getPlatformByName("CUDA")
-            properties = {'DeviceIndex': str(self.gpu_id), 
-                            'CudaPrecision': 'mixed'}
+            properties = {'DeviceIndex': str(self.gpu_id),
+                          'CudaPrecision': 'mixed'}
         except Exception:
             platform = omm.Platform_getPlatformByName("OpenCL")
             properties = {'DeviceIndex': str(self.gpu_id)}
@@ -203,56 +202,56 @@ class Simulate(yml_base):
             self.top.topology, self.system, integrator, platform, properties)
         self.simulation = simulation
 
-    def minimizeEnergy(self): 
+    def minimizeEnergy(self):
         self.simulation.context.setPositions(self.top.positions)
         self.simulation.minimizeEnergy()
 
-    def add_reporters(self): 
+    def add_reporters(self):
         report_freq = int(self.report_time / self.dt)
         self.simulation.reporters.append(
-                    app.DCDReporter(self.output_traj, report_freq))
+            app.DCDReporter(self.output_traj, report_freq))
         self.simulation.reporters.append(
-                app.CheckpointReporter('checkpnt.chk', report_freq))
+            app.CheckpointReporter('checkpnt.chk', report_freq))
 
         if self.log_report:
             report_freq = int(self.log_report / self.dt)
         self.simulation.reporters.append(app.StateDataReporter(
-                self.output_log, report_freq, 
-                step=True, time=True, speed=True,
-                potentialEnergy=True, temperature=True, totalEnergy=True))
+            self.output_log, report_freq,
+            step=True, time=True, speed=True,
+            potentialEnergy=True, temperature=True, totalEnergy=True))
         if self.dbonds_umb:
             self.simulation.reporters.append(
-                    RCReporter(self.output_rc, report_freq, **self.dbonds_umb)) 
+                RCReporter(self.output_rc, report_freq, **self.dbonds_umb))
 
-    def run_sim(self, path='./'): 
-        if self.local_ssd: 
+    def run_sim(self, path='./'):
+        if self.local_ssd:
             run_path = f"{self.local_ssd}/{os.path.basename(path)}"
-        else: 
+        else:
             run_path = path
-        
+
         os.makedirs(run_path, exist_ok=True)
-        
-        self.build_simulation() 
+
+        self.build_simulation()
         # skip minimization if check point exists
-        if self.checkpoint: 
+        if self.checkpoint:
             self.simulation.loadCheckpoint(self.checkpoint)
-        else: 
+        else:
             self.minimizeEnergy()
             self.simulation.step(self.skip_step)
-            
+
         os.chdir(run_path)
-        self.add_reporters() 
+        self.add_reporters()
         # clutchy round up method
         nsteps = int(self.sim_time / self.dt + .5)
         logger.info(f"  Running simulation for {nsteps} steps. ")
         self.simulation.step(nsteps)
-        if self.local_ssd: 
+        if self.local_ssd:
             for output in os.listdir(run_path):
                 src = f"{run_path}/{output}"
                 shutil.move(src, path)
         os.chdir(self.base_dir)
 
-    def md_run(self): 
+    def md_run(self):
         """ddmd recursive MD runs"""
         path_label = f"{os.path.basename(self.top_file).split('.')[0]}"
         if self.dbonds_umb:
@@ -265,7 +264,7 @@ class Simulate(yml_base):
 
 
 def ddbonds_umbforce(
-        atom_i: int, atom_j: int, atom_k: int, 
+        atom_i: int, atom_j: int, atom_k: int,
         k: float = 0, rc0: float = 0):
     force = omm.CustomCompoundBondForce(3, """
             0.5*k*((r13-r23)-rc0)^2; 
@@ -277,8 +276,8 @@ def ddbonds_umbforce(
 
 
 def morse_bond_force(
-        atom_i:int, atom_j:int, 
-        de:float=0, alpha:float=0, r0:float=0):
+        atom_i: int, atom_j: int,
+        de: float = 0, alpha: float = 0, r0: float = 0):
     force = omm.CustomBondForce("de*(1 - exp(-alpha*(r-r0)))^2")
     force.addGlobalParameter('de', de)
     force.addGlobalParameter('alpha', alpha)
@@ -287,7 +286,7 @@ def morse_bond_force(
     return force
 
 
-# def exclude_vmd_force(atom_i:int, atom_j:int): 
+# def exclude_vmd_force(atom_i:int, atom_j:int):
 #     force = omm.CustomBondForce("-4*epsilon*((sigma/r)^12-(sigma/r)^6)")
 #     force.addGlobalParameter('epsilon', )
 #     force.addGlobalParameter('sigma', )

@@ -8,6 +8,7 @@ from .utils import build_logger, get_lig_charge, get_lig_name
 
 logger = build_logger()
 
+
 class AMBER_param(object):
     """
     A master function to parameterize complex pdb file with
@@ -21,15 +22,15 @@ class AMBER_param(object):
             add_sol=True,
             lig_charges={},
             lig_param_path='',
-            forcefield='ff19SB', 
+            forcefield='ff19SB',
             forcefield_rna='OL3',
             forcefield_dna='OL15',
             watermodel='opc',
-            padding=20, 
-            cubic=True, 
-            cation='Na+', 
-            n_cations=0, 
-            anion='Cl-', 
+            padding=20,
+            cubic=True,
+            cation='Na+',
+            n_cations=0,
+            anion='Cl-',
             n_anions='0'):
 
         self.pdb = pdb
@@ -46,7 +47,7 @@ class AMBER_param(object):
         self.cubic = cubic
         self.cation = cation
         self.n_cations = n_cations
-        self.anion = anion 
+        self.anion = anion
         self.n_anions = n_anions
         self.pdb_dissect()
 
@@ -61,7 +62,7 @@ class AMBER_param(object):
         self.prot_files = []
         self.lig_files = []
         # not_na_not_protein = mda_traj.select_atoms('not protein and not nucleic')
-        # if not_na_not_protein.n_atoms == 0: 
+        # if not_na_not_protein.n_atoms == 0:
         #     self.prot_files.append(self.pdb)
         #     return
 
@@ -81,11 +82,11 @@ class AMBER_param(object):
                 self.prot_files.append(protein_save)
 
             # processing na
-            if na_not_protein.n_atoms != 0: 
+            if na_not_protein.n_atoms != 0:
                 na_not_protein_save = f'na_seg{seg.segid}.pdb'
-                na_not_protein.wrote(na_not_protein_save) 
+                na_not_protein.wrote(na_not_protein_save)
                 self.prot_files.append(na_not_protein_save)
-            
+
             # processing ligands
             if not_protein.n_atoms != 0:
                 for i, res in enumerate(not_protein.residues):
@@ -116,7 +117,7 @@ class AMBER_param(object):
                 lig_charge = self.lig_charges[lig_name]
             else:
                 lig_charge = get_lig_charge(lig)
-            
+
             antechamber_command = \
                 f'{self.amber_bin}antechamber -i {lig} -fi pdb -o {lig_tag}.mol2 '\
                 f'-fo mol2 -c bcc -pf y -an y -nc {lig_charge}'
@@ -132,23 +133,23 @@ class AMBER_param(object):
         self.get_outputs()
         # skip if already run
         if (os.path.exists(self.output_top) and
-            os.path.exists(self.output_inpcrd)):
+                os.path.exists(self.output_inpcrd)):
             logger.info(f"Topology found, skipping building {os.path.basename(self.output_pdb)}...")
             return self.output_inpcrd, self.output_top
-        
+
         if not self.lig_param_path:
             self.param_ligs()
         self.write_tleapIN()
         subprocess.check_output(f'{self.amber_bin}tleap -f leap.in', shell=True)
         # checking whether tleap is done
         if (os.path.exists(self.output_top) and
-            os.path.exists(self.output_inpcrd)):
+                os.path.exists(self.output_inpcrd)):
             logger.info(f"Successfully built {os.path.basename(self.output_pdb)}...")
             return self.output_inpcrd, self.output_top
         else:
             raise Exception("Leap failed to build topology, check errors...")
-    
-    def get_outputs(self): 
+
+    def get_outputs(self):
         self.output_path = os.path.abspath(os.path.dirname(self.pdb))
         self.output_top = os.path.join(self.output_path, f'{self.label}.prmtop')
         self.output_inpcrd = os.path.join(self.output_path, f'{self.label}.inpcrd')
@@ -195,9 +196,9 @@ class AMBER_param(object):
             leap.write(f"comp = combine {{ {combine_insts} }}\n")
             if self.add_sol:
                 leap.write(f"solvatebox comp {self.watermodel.upper()}BOX {self.padding}")
-                if self.cubic: 
+                if self.cubic:
                     leap.write(f" iso\n")
-                else: 
+                else:
                     leap.write('/n')
                 leap.write(f"addions comp {self.cation} {self.n_cations}\n")
                 leap.write(f"addions comp {self.anion} {self.n_anions}\n")
@@ -205,4 +206,3 @@ class AMBER_param(object):
             leap.write(f"savepdb comp {self.output_pdb}\n")
             leap.write("quit\n")
         return 1
-

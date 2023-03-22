@@ -3,10 +3,10 @@ import sys
 import shutil
 import numpy as np
 
-sys.path.append("../")
 from multirl.sim.amber import AMBER_param
 from multirl.sim.sim import Simulate
 from multirl.sim.utils import dict_from_yaml, cal_rmsf
+
 
 def sim_eval(yml_file, pdb=None, amber_bin=''):
     args = dict_from_yaml(yml_file)
@@ -41,13 +41,13 @@ def param(pdb, **kwargs):
     # run and get the parameters
     os.chdir(work_dir)
     amberP = AMBER_param(pdb_copy, forcefield='ff14SB',
-            watermodel='tip3p', **kwargs)
-    print(amberP.prot_files, amberP.lig_files)
+                         watermodel='tip3p', **kwargs)
+    # print(amberP.prot_files, amberP.lig_files)
     pdb, top = amberP.param_comp()
     os.chdir(host_dir)
     return pdb, top
 
-def sim(args): 
-    sim = Simulate(**args)
-    return sim.md_run()
 
+def sim(args):
+    sim_run = Simulate(**args)
+    return sim_run.md_run()
