@@ -1,0 +1,6 @@
+mr_lig: 
+    pdb: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/lig_inputs/mr.pdb
+    top: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/lig_inputs/input_mr/mr_gmx.top
+mp_lig: 
+    pdb: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/lig_inputs/mp.pdb
+    top: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/lig_inputs/input_mp/mp_gmx.top

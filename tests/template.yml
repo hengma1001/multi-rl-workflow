@@ -1,0 +1,42 @@
+title: EVB malonaldehyde
+conda_env: $HOME/miniconda3/envs/evb
+continue: False
+n_sims: 8
+output_dir: ./evb_5mdh
+
+md_setup:
+#    /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/input_5mdh_b_mr/5mdh_b.top
+  mr_pdb: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/input_5mdh_b_mr/5mdh_b_mr.pdb
+  mp_pdb: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/input_5mdh_b_mp/5mdh_b_mp.pdb
+  mr_top: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/input_5mdh_b_mr/5mdh_b_mr.top
+  mp_top: /lambda_stor/homes/heng.ma/Research/gene_transformer/mdh_evb/inputs/input_5mdh_b_mp/5mdh_b_mp.top
+  temperature: 300
+  sim_time: 1 # in ns
+  report_time: 50 # in ps
+  log_report: .1
+  dt: 1 # in fs
+  explicit_sol: True
+  nonbonded_cutoff: 1 # turning off cutoff
+
+evb_cfg: 
+  rc_min: -0.06
+  rc_max: 0.06
+  rc_inc: 0.005
+  xcnst: 11.5
+  mr_setup:
+    mr_atom: 74
+    mp_atom: 27
+    h_atom: 80
+  mp_setup:
+    mr_atom: 75
+    mp_atom: 27
+    h_atom: 49
+  dbonds_umb:
+    k: 500000
+  morse_bond:
+    de: 1000
+    alpha: 11.76
+    r0: 0.11
+
+
+
