@@ -133,6 +133,7 @@ def pymol_align(moble, target, pymol_exec=None):
 
 
 def build_sol(prot_pdb, lig_pdb, lig_param_path=None):
+    """Add water to the prot+lig complex"""
     prot_top = pmd.load_file(prot_pdb)
     lig_pmd = pmd.load_file(lig_pdb)
     comp_top = prot_top + lig_pmd
