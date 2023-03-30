@@ -29,7 +29,8 @@ class lig_setup(BaseSettings):
 
 
 def evb_run(pdb, ref_pdb, lig_yml, template_yml,
-            pymol_exec='pymol', wham_exe='wham_exe'):
+            pymol_exec='pymol', wham_exe='wham_exe',
+            amber_bin=''):
     """Run empirical valence bond method for reaction free energy profile
 
     Args: 
@@ -39,11 +40,12 @@ def evb_run(pdb, ref_pdb, lig_yml, template_yml,
         template_yml: template setup for evb sim runs 
         pymol_exec: pymol executable path
         wham_exec: wham executable path
+        amber_bin: amber bin directory
     Returns:
 
     """
     logger.info("Building pdb and top...")
-    sim_setups = evb_setup(pdb, ref_pdb, lig_yml, pymol_exec)
+    sim_setups = evb_setup(pdb, ref_pdb, lig_yml, pymol_exec, amber_bin)
     # build yml files for md simulations
     logger.info("Building MD setup for each sampling point...")
     md_ymls = evb_ymls(template_yml, sim_setups)
@@ -75,14 +77,14 @@ def evb_ymls(template_yml, sim_setups):
     return build_ymls(run_setup)
 
 
-def evb_setup(pdb, ref_pdb, lig_yml, pymol_exec):
+def evb_setup(pdb, ref_pdb, lig_yml, pymol_exec, amber_bin):
     prot_label = os.path.basename(pdb)[:-4]
     pdb_aligned = pymol_align(pdb, ref_pdb, pymol_exec=pymol_exec)
 
     # replace his195 to hip
     prot_pdb = _mdh_mod_hip(pdb_aligned)
     # build top
-    prot_crd, prot_top = param(prot_pdb, add_sol=False)
+    prot_crd, prot_top = param(prot_pdb, add_sol=False, amber_bin=amber_bin)
     prot_top = pmd.load_file(prot_top, xyz=prot_crd)
 
     # loop ligs
