@@ -71,7 +71,7 @@ def evb_ymls(template_yml, sim_setups):
         run_setup['output_dir'] = f"evb_{label}"
         for filetype in ["top", "pdb"]:
             run_setup['md_setup'][f'{sim_sys}_{filetype}'] = \
-                os.path.abspath(f"{sim_setups[sim]}.{filetype}")
+                os.path.abspath(f"{sim_setups[sim_name]}.{filetype}")
 
     dict_to_yaml(run_setup, 'test.yml')
     return build_ymls(run_setup)
@@ -98,7 +98,8 @@ def evb_setup(pdb, ref_pdb, lig_yml, pymol_exec, amber_bin):
         comp_top = prot_top + lig_pmd
 
         if i == 0:
-            sol_top = build_sol(prot_pdb, lig_pdb, lig_param_path=os.path.dirname(lig_top))
+            sol_top = build_sol(prot_pdb, lig_pdb, lig_param_path=os.path.dirname(lig_top), 
+                    amber_bin=amber_bin)
         comp_top = comb_top(comp_top, sol_top)
 
         output_dir = f"input_{prot_label}_{lig_type}"
@@ -134,7 +135,7 @@ def pymol_align(moble, target, pymol_exec=None):
     return output
 
 
-def build_sol(prot_pdb, lig_pdb, lig_param_path=None):
+def build_sol(prot_pdb, lig_pdb, lig_param_path=None, **kwargs):
     """Add water to the prot+lig complex"""
     prot_top = pmd.load_file(prot_pdb)
     lig_pmd = pmd.load_file(lig_pdb)
@@ -146,7 +147,7 @@ def build_sol(prot_pdb, lig_pdb, lig_param_path=None):
             os.chdir(tp)
             temp_pdb = f'{tp}/sol.pdb'
             comp_top.save(temp_pdb, overwrite=True)
-            pdb, top = param(temp_pdb, lig_param_path=lig_param_path)
+            pdb, top = param(temp_pdb, lig_param_path=lig_param_path, **kwargs)
             top_sol = pmd.load_file(top, xyz=pdb)
     finally:
         os.chdir(host_dir)
@@ -221,8 +222,8 @@ def evb_analysis(
         rc_0 = float(os.path.basename(md).split('_')[-1])
         md_type = os.path.basename(md).split('_')[-2]
 
-        sim_log = f"{md}/output.log"
-        sim_df = pd.read_csv(sim_log)
+        # sim_log = f"{md}/output.log"
+        # sim_df = pd.read_csv(sim_log)
         rc_log = f"{md}/output.rc"
         rc_df = pd.read_csv(rc_log)
 
@@ -231,15 +232,16 @@ def evb_analysis(
             "rc": rc_df['rc'].to_list()[skip_start:],
             "dist_mr": rc_df['dist_mr'].to_list()[skip_start:],
             "dist_mp": rc_df[' dist_mp'].to_list()[skip_start:],
-            'frame': list(np.arange(len(sim_df)))[skip_start:],
-            'E_p': sim_df['Potential Energy (kJ/mole)'].to_list()[skip_start:],
+            'frame': list(np.arange(len(rc_df)))[skip_start:],
+            # 'E_p': sim_df['Potential Energy (kJ/mole)'].to_list()[skip_start:],
             'run_type': md_type}
         evb_df.append(local_df)
 
     # dataframe
     df = pd.DataFrame(evb_df)
-    df = df.explode(column=['rc', "dist_mr", "dist_mp", 'frame', 'E_p']).reset_index(drop=True)
-    df = df.astype({'rc0': float, 'rc': float, 'frame': int, 'E_p': float})
+    df = df.explode(column=["rc", "dist_mr", "dist_mp", "frame"]).reset_index(drop=True)
+    # df = df.explode(column=['rc', "dist_mr", "dist_mp", 'frame', 'E_p']).reset_index(drop=True)
+    df = df.astype({'rc0': float, 'rc': float, 'frame': int,})
     df['E_umb'] = 1/2 * 500000 * (df.rc/10 - df.rc0)**2
 
     rmsf = run_wham(df, wham_exe=wham_exe)
